@@ -25,15 +25,17 @@ on:
         - RT-AC85P
         - XY-C1
         - RS1200P
-        default: 'RS1200P'
+        - TIMECLOUD
+        - WR330
+        default: 'WR330'
       plugins:
         description: 'json format string of include configs'
         required: true
-        default: '{"vpnsvr":"n","vpncli":"n","vpncmd":"n","ss":"y","v2ray":"n","xray":"y","trojan":"y","ssobfs":"y","dnsforwarder":"n","adbyby":"n","adguardhome":"n","smartdns":"n","aliddns":"n","zerotier":"n","ddnsto":"n","wireguard":"n","frpc":"y","aldriver":"n","mentohust":"n","scutclient":"n","njitclient":"n","minieap":"n","dogcom":"n"}'
+        default: '{"vpnsvr":"y","vpncli":"y","vpncmd":"n","ss":"y","v2ray":"n","xray":"y","trojan":"y","ssobfs":"y","dnsforwarder":"n","adbyby":"n","adguardhome":"n","smartdns":"n","aliddns":"y","zerotier":"n","ddnsto":"n","wireguard":"n","frpc":"y","aldriver":"y","mentohust":"n","scutclient":"n","njitclient":"n","minieap":"n","dogcom":"n"}'
       firmwarever:
         description: 'firmware''s version'
         required: true
-        default: '20220327'
+        default: '20220626'
       busyboxver:
         type: choice
         description: 'busybox''s version'
@@ -48,7 +50,7 @@ on:
       ssp:
         type: boolean
         description: 'whether to apply the patch for download ssp bin from local or remote url'
-        default: 'true'
+        default: 'false'
       uploadwet:
         type: boolean
         description: 'whether to upload firmware to wetransfer'
@@ -273,15 +275,15 @@ jobs:
         done
         cd $FIRMWARE_PATH
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "::set-output name=status::success"
+        echo "STATUS=success" >> $GITHUB_ENV
     - name : Upload packages
       uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success'
+      if: env.STATUS == 'success'
       with:
         name: Padavan-packages
         path: ${{ env.FIRMWARE }}
     - name: Upload firmware to WeTransfer
-      if: steps.organize.outputs.status == 'success' && github.event.inputs.uploadwet == 'true'
+      if: env.STATUS == 'success' && github.event.inputs.uploadwet == 'true'
       run: |
         curl -fsSL git.io/file-transfer | sh
         ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
@@ -289,13 +291,13 @@ jobs:
         echo "WETRANSFER_URL=$(cat wetransfer.log | grep -o -E "https?://[a-zA-Z0-9\.\/_&=@$%?~#-]*")" >> $GITHUB_ENV
     - name: Remove obsolete firmwares on artifacts
       uses: c-hive/gha-remove-artifacts@v1.2.0
-      if: steps.organizer.outputs.status == 'success'
+      if: env.STATUS == 'success'
       with:
         age: '1 day'
         skip-recent: 5
     - name: PushPlus Notification
       uses: vb1980/Action_PushPlus@master
-      if: steps.organize.outputs.status == 'success' && github.event.inputs.pushplus == 'true'
+      if: env.STATUS == 'success' && github.event.inputs.pushplus == 'true'
       with:
         token: ${{ secrets.PUSHTOKEN }}
         title: ${{ github.event.inputs.targetname }}_Build_Completed
